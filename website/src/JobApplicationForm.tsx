@@ -40,7 +40,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       showUploadView: true,
       showUploadFolders: true,
       supportDrives: true,
-      multiselect: true,
+      multiselect: false,
       // customViews: customViewsArray, // custom view
       callbackFunction: (data) => {
         if (data.action === 'cancel') {
