@@ -54,8 +54,8 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       parents: ['1UWW22Fj10ohYtfW9-JBS5ZpnEG3Yg-Ov'], // Replace with the ID of the folder in Google Drive
     };
 
-    const response = await axios.post(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
+    const createResponse = await axios.post(
+      'https://www.googleapis.com/drive/v3/files',
       fileMetadata,
       {
         headers: {
@@ -66,12 +66,30 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       }
     );
 
+    const fileId = createResponse.data.id;
+
     // Upload the resume content
-    await axios.put(response.headers.location, resumeFile, {
-      headers: {
-        'Content-Type': resumeFile?.type,
-      },
-    });
+    await axios.patch(
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      resumeFile,
+      {
+        headers: {
+          'Content-Type': resumeFile?.type,
+          Authorization:
+            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163',
+        },
+      }
+    );
+
+    const response = await axios.get(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`,
+      {
+        headers: {
+          Authorization:
+            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163',
+        },
+      }
+    );
 
     return response.data;
   };
@@ -83,17 +101,14 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       resumeUrl: uploadResponse.webViewLink,
     };
 
-    console.log('formDataWithResumeUrl', formDataWithResumeUrl);
+    const payload = new FormData();
+    payload.append('entry.714037552', formDataWithResumeUrl.name);
+    payload.append('entry.1056543652', formDataWithResumeUrl.email);
+    payload.append('entry.1423805949', formDataWithResumeUrl.resumeUrl);
 
     const response = await axios.post(
-      'https://docs.google.com/forms/d/e/1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg/formResponse',
-      // Replace with the URL of your Google Form's endpoint
-      {
-        'entry.714037552': formDataWithResumeUrl.name,
-        'entry.1056543652': formDataWithResumeUrl.email,
-        'entry.1423805949': formDataWithResumeUrl.resumeUrl,
-        // Add more form field entries as needed
-      }
+      'https://docs.google.com/forms/d/e/1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg/formResponse', // Replace with the URL of your Google Form's endpoint
+      payload
     );
 
     return response.data;

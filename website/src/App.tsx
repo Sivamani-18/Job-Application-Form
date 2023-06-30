@@ -18,7 +18,6 @@ function App() {
     <div>
       <h1>Job Application Form</h1>
       <JobApplicationForm onSubmit={handleSubmit} />
-      {/* <FileUpload /> */}
     </div>
   );
 }
