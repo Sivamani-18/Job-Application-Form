@@ -1,24 +1,24 @@
 import React from 'react';
-import logo from './logo.svg';
+import JobApplicationForm from './JobApplicationForm';
 import './App.css';
 
+interface FormFields {
+  name: string;
+  email: string;
+  // Add more fields as needed
+}
+
 function App() {
+  const handleSubmit = (data: FormFields) => {
+    // Handle the submitted form data
+    console.log('Form submitted:', data);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Job Application Form</h1>
+      <JobApplicationForm onSubmit={handleSubmit} />
+      {/* <FileUpload /> */}
     </div>
   );
 }
