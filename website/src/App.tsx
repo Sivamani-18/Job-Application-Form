@@ -15,8 +15,8 @@ function App() {
   };
 
   return (
-    <div>
-      <h1>Job Application Form</h1>
+    <div className='google-forms'>
+      <h1>Google Form upload</h1>
       <JobApplicationForm onSubmit={handleSubmit} />
     </div>
   );

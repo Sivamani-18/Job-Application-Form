@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import useDrivePicker from 'react-google-drive-picker';
+
+import './JobApplicationForm.css';
 
 interface FormFields {
   name: string;
@@ -14,131 +17,132 @@ interface JobApplicationFormProps {
 const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
   onSubmit,
 }) => {
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [openPicker, authResponse] = useDrivePicker();
   const [formData, setFormData] = useState<FormFields>({
     name: '',
     email: '',
     // Add more fields as needed
   });
+  const [uploadResponse, setUploadResponse] = useState<string>('');
+  const [showSuccessPopup, setShowSuccessPopup] = useState<boolean>(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setResumeFile(e.target.files[0]);
-    }
+  const handleOpenPicker = () => {
+    openPicker({
+      clientId:
+        '370773725330-hk1dfkfcn6uhjo2cebqk8d4iiviudfmu.apps.googleusercontent.com',
+      developerKey: 'AIzaSyCsnm83pONiOrbBtIfu6G7yklqMDAFMJA4',
+      viewId: 'DOCS',
+      // token: token, // pass oauth token in case you already have one
+      showUploadView: true,
+      showUploadFolders: true,
+      supportDrives: true,
+      multiselect: true,
+      // customViews: customViewsArray, // custom view
+      callbackFunction: (data) => {
+        if (data.action === 'cancel') {
+          console.log('User clicked cancel/close button');
+        } else if (data.docs && data.docs.length > 0) {
+          console.log(data);
+          const uploadResponse = data.docs[0].url;
+          setUploadResponse(uploadResponse);
+        }
+      },
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const uploadResponse = await uploadResumeToDrive();
-    console.log('uploadResponse', uploadResponse.webViewLink);
+    if (!uploadResponse) {
+      alert('Please Attached Resume file.');
+      return;
+    }
 
     const formResponse = await submitFormResponse(uploadResponse);
 
     if (formResponse) {
       onSubmit(formData);
+      setShowSuccessPopup(true);
+      setFormData({
+        name: '',
+        email: '',
+      });
     }
   };
 
-  const uploadResumeToDrive = async () => {
-    // Authenticate with Google Drive
-    // You can use react-google-login to handle authentication
-
-    // Create a new file in Google Drive
-    const fileMetadata = {
-      name: resumeFile?.name || 'resume.pdf',
-      parents: ['1UWW22Fj10ohYtfW9-JBS5ZpnEG3Yg-Ov'], // Replace with the ID of the folder in Google Drive
-    };
-
-    const createResponse = await axios.post(
-      'https://www.googleapis.com/drive/v3/files',
-      fileMetadata,
-      {
-        headers: {
-          Authorization:
-            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163', // Replace with the access token obtained after authentication
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    const fileId = createResponse.data.id;
-
-    // Upload the resume content
-    await axios.patch(
-      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-      resumeFile,
-      {
-        headers: {
-          'Content-Type': resumeFile?.type,
-          Authorization:
-            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163',
-        },
-      }
-    );
-
-    const response = await axios.get(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`,
-      {
-        headers: {
-          Authorization:
-            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163',
-        },
-      }
-    );
-
-    return response.data;
-  };
-
-  const submitFormResponse = async (uploadResponse: any) => {
+  const submitFormResponse = async (resumeUrl: string) => {
     // Create a new response in Google Forms
-    const formDataWithResumeUrl = {
-      ...formData,
-      resumeUrl: uploadResponse.webViewLink,
-    };
 
     const payload = new FormData();
-    payload.append('entry.714037552', formDataWithResumeUrl.name);
-    payload.append('entry.1056543652', formDataWithResumeUrl.email);
-    payload.append('entry.1423805949', formDataWithResumeUrl.resumeUrl);
+    payload.append('entry.714037552', formData.name);
+    payload.append('entry.1056543652', formData.email);
+    payload.append('entry.1423805949', resumeUrl);
 
-    const response = await axios.post(
-      'https://docs.google.com/forms/d/e/1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg/formResponse', // Replace with the URL of your Google Form's endpoint
-      payload
-    );
+    try {
+      const response = await axios.post(
+        'https://docs.google.com/forms/d/e/1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg/formResponse', // Replace with the URL of your Google Form's endpoint
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting form response:', error);
+      return true;
+    }
+  };
 
-    return response.data;
+  const closeSuccessPopup = () => {
+    setShowSuccessPopup(false);
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>
-        Name:
+    <form className='job-application-form' onSubmit={handleSubmit}>
+      <div className='form-group'>
+        <label className='form-label'>Name*:</label>
         <input
           type='text'
           name='name'
           value={formData.name}
           onChange={handleInputChange}
+          className='form-input'
+          required
         />
-      </label>
-      <label>
-        Email:
+      </div>
+      <div className='form-group'>
+        <label className='form-label'>Email*:</label>
         <input
           type='email'
           name='email'
           value={formData.email}
           onChange={handleInputChange}
+          className='form-input'
+          required
         />
-      </label>
-      <label>
-        Resume:
-        <input type='file' accept='.pdf' onChange={handleFileChange} />
-      </label>
-      <button type='submit'>Submit</button>
+      </div>
+      <div className='form-group'>
+        <button
+          type='button'
+          onClick={handleOpenPicker}
+          className='btn-open-picker'
+        >
+          Attached Resume
+        </button>
+      </div>
+      <div className='form-group'>
+        <button type='submit' className='btn-submit'>
+          Submit
+        </button>
+      </div>
+      {showSuccessPopup && (
+        <div className='success-popup'>
+          <p>Form submitted successfully!</p>
+          <button className='close-button' onClick={closeSuccessPopup}>
+            Close
+          </button>
+        </div>
+      )}
     </form>
   );
 };
