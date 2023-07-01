@@ -82,13 +82,14 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     payload.append('entry.1423805949', resumeUrl);
 
     try {
+      const FORM_ID =
+        '1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg'; // Replace with the URL of your Google Form's endpoint
       const response = await axios.post(
-        'https://docs.google.com/forms/d/e/1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg/formResponse', // Replace with the URL of your Google Form's endpoint
+        `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`,
         payload
       );
       return response.data;
     } catch (error) {
-      console.error('Error submitting form response:', error);
       return true;
     }
   };
