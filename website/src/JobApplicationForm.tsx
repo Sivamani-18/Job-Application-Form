@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import useDrivePicker from 'react-google-drive-picker';
+import GoogleDrivePicker from 'google-drive-picker';
 
 import './JobApplicationForm.css';
 
@@ -17,7 +17,8 @@ interface JobApplicationFormProps {
 const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
   onSubmit,
 }) => {
-  const [openPicker, authResponse] = useDrivePicker();
+  const [openPicker, authRes] = GoogleDrivePicker();
+  const [authTocken, setauthTocken] = useState('');
   const [formData, setFormData] = useState<FormFields>({
     name: '',
     email: '',
@@ -36,12 +37,12 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
         '370773725330-hk1dfkfcn6uhjo2cebqk8d4iiviudfmu.apps.googleusercontent.com',
       developerKey: 'AIzaSyCsnm83pONiOrbBtIfu6G7yklqMDAFMJA4',
       viewId: 'DOCS',
-      // token: token, // pass oauth token in case you already have one
+      token: authTocken,
       showUploadView: true,
       showUploadFolders: true,
       supportDrives: true,
       multiselect: false,
-      // customViews: customViewsArray, // custom view
+      // Other configuration options...
       callbackFunction: (data) => {
         if (data.action === 'cancel') {
           console.log('User clicked cancel/close button');
@@ -97,6 +98,12 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
   const closeSuccessPopup = () => {
     setShowSuccessPopup(false);
   };
+
+  useEffect(() => {
+    if (authRes) {
+      setauthTocken(authRes.access_token);
+    }
+  }, [authRes]);
 
   return (
     <form className='job-application-form' onSubmit={handleSubmit}>
