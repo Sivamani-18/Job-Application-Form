@@ -44,6 +44,8 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     }
   };
 
+  const authKey = '';
+
   const uploadResumeToDrive = async () => {
     // Authenticate with Google Drive
     // You can use react-google-login to handle authentication
@@ -59,8 +61,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       fileMetadata,
       {
         headers: {
-          Authorization:
-            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163', // Replace with the access token obtained after authentication
+          Authorization: `Bearer ${authKey}`, // Replace with the access token obtained after authentication
           'Content-Type': 'application/json',
         },
       }
@@ -75,8 +76,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       {
         headers: {
           'Content-Type': resumeFile?.type,
-          Authorization:
-            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163',
+          Authorization: `Bearer ${authKey}`, // Replace with the access token obtained after authentication
         },
       }
     );
@@ -85,8 +85,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       `https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`,
       {
         headers: {
-          Authorization:
-            'Bearer ya29.a0AbVbY6PLbtWIz89LXYaj1XWgNV2kabXkCDZHOr55ECUuZkFTg3GjTX7F_v2wjea9bpomg6rr3w8Ga4PvR2p9WGAB6wQzrTDVjKhn6fRMQMX6TRmuFeZwpWxrBHvlCDwYsthOlNwuJ2t-k43d_TPBKxoT7DAKaCgYKAY4SARMSFQFWKvPl6QwJtjv4TMycc9OIaQ2hog0163',
+          Authorization: `Bearer ${authKey}`, // Replace with the access token obtained after authentication
         },
       }
     );
@@ -101,13 +100,15 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       resumeUrl: uploadResponse.webViewLink,
     };
 
+    const Form_ID = '1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg';
+
     const payload = new FormData();
     payload.append('entry.714037552', formDataWithResumeUrl.name);
     payload.append('entry.1056543652', formDataWithResumeUrl.email);
     payload.append('entry.1423805949', formDataWithResumeUrl.resumeUrl);
 
     const response = await axios.post(
-      'https://docs.google.com/forms/d/e/1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg/formResponse', // Replace with the URL of your Google Form's endpoint
+      `https://docs.google.com/forms/d/e/${Form_ID}/formResponse`, // Replace with the URL of your Google Form's endpoint
       payload
     );
 
