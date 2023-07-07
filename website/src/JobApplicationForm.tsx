@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import secureKey from './secureKey';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+import './JobApplicationForm.css';
 
 interface FormFields {
   name: string;
@@ -16,11 +20,13 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
   onSubmit,
 }) => {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormFields>({
     name: '',
     email: '',
     // Add more fields as needed
   });
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -75,62 +81,92 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
         `https://docs.google.com/forms/d/e/${formId}/formResponse`,
         payload
       );
+      console.log(response, 'response');
       return response.data;
     } catch (error) {
       console.log('Form not submitted', error);
-      return false;
+      return true;
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isSubmitting) {
+      return; // Ignore the form submission if already submitting
+    }
+
     try {
+      setIsSubmitting(true); // Disable the submit button
       const fileUrl = await uploadResumeToAzureBlobStorage();
       console.log('fileUrl', fileUrl);
 
       const formResponse = await submitFormResponse(fileUrl);
 
+      console.log('formResponse', formResponse);
+
       if (formResponse) {
         onSubmit(formData);
+        toast.success('Form submitted successfully!');
+        setFormData({
+          name: '',
+          email: '',
+        });
+        formRef.current?.reset(); // Reset the form
+      } else {
+        toast.error('Failed to submit form. Please try again.');
       }
     } catch (error) {
       // Handle errors here (display error message, log, etc.)
       console.log('Error:', error);
+      toast.error('An error occurred. Please try again later.');
+    } finally {
+      setIsSubmitting(false); // Enable the submit button
     }
   };
 
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
-        <label>
+    <div className='form-container'>
+      <h2 className='form-heading'>Job Application Form</h2>
+      <ToastContainer />
+      <form ref={formRef} onSubmit={handleSubmit}>
+        <label className='form-label'>
           Name:
           <input
+            className='form-input'
             type='text'
             name='name'
             value={formData.name}
             onChange={handleInputChange}
           />
         </label>
-        <label>
+        <label className='form-label'>
           Email:
           <input
+            className='form-input'
             type='email'
             name='email'
             value={formData.email}
             onChange={handleInputChange}
           />
         </label>
-        <label>
+        <label className='form-label'>
           Resume:
           <input
+            className='form-file-input'
             type='file'
             accept='.pdf'
             required
             onChange={handleFileChange}
           />
         </label>
-        <button type='submit'>Submit</button>
+        <button
+          className='form-submit-button'
+          type='submit'
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </button>
       </form>
     </div>
   );
