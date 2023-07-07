@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import secureKey from './secureKey';
 
 interface FormFields {
   name: string;
@@ -32,34 +33,29 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
   };
 
   const uploadResumeToAzureBlobStorage = async () => {
-    const accountName = process.env.REACT_APP_AZURE_ACCOUNT_NAME;
-    const containerName = process.env.REACT_APP_AZURE_CONTAINER_NAME;
-    const sasToken = process.env.REACT_APP_AZURE_SAS_TOKEN;
-
-    if (!accountName || !containerName || !sasToken) {
-      throw new Error('Azure Blob Storage credentials missing.');
-    }
+    const { accountName, containerName, sasToken } = secureKey.azure;
 
     const fileMetadata = {
       name: resumeFile?.name || 'resume.pdf',
     };
 
-    const createResponse = await axios.post(
-      `https://${accountName}.blob.core.windows.net/${containerName}/${fileMetadata.name}${sasToken}`,
-      resumeFile,
-      {
-        headers: {
-          'Content-Type': resumeFile?.type,
-        },
-      }
-    );
+    const url = `https://${accountName}.blob.core.windows.net/${containerName}/${fileMetadata.name}?${sasToken}`;
 
-    const fileUrl = createResponse.request.res.responseUrl;
+    await axios.put(url, resumeFile, {
+      headers: {
+        'Content-Type': resumeFile?.type,
+        'x-ms-blob-type': 'BlockBlob', // Specify the blob type as 'BlockBlob'
+      },
+    });
+
+    const fileUrl = url.split('?')[0]; // Remove the SAS token from the file URL
 
     return fileUrl;
   };
 
   const submitFormResponse = async (fileUrl: string) => {
+    const { formId } = secureKey.googleForm;
+
     const formDataWithResumeUrl = {
       ...formData,
       resumeUrl: fileUrl,
@@ -71,14 +67,8 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     payload.append('entry.1423805949', formDataWithResumeUrl.resumeUrl);
 
     try {
-      const FORM_ID = process.env.REACT_APP_GOOGLE_FORM_ID;
-
-      if (!FORM_ID) {
-        throw new Error('Google Form ID missing.');
-      }
-
       const response = await axios.post(
-        `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`,
+        `https://docs.google.com/forms/d/e/${formId}/formResponse`,
         payload
       );
       return response.data;
