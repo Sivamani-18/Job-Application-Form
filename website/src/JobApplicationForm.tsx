@@ -39,8 +39,11 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       name: resumeFile?.name || 'resume.pdf',
     };
 
+    const timestamp = new Date().getTime(); // Generate a unique timestamp
+    const uniqueFileName = `${timestamp}_${fileMetadata.name}`; // Append the timestamp to the original filename
+
     const folderName = 'formdata'; // Specify folder name
-    const url = `https://${accountName}.blob.core.windows.net/${containerName}/${folderName}/${fileMetadata.name}?${sasToken}`;
+    const url = `https://${accountName}.blob.core.windows.net/${containerName}/${folderName}/${uniqueFileName}?${sasToken}`;
 
     await axios.put(url, resumeFile, {
       headers: {
