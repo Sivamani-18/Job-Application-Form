@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
 interface FormFields {
@@ -20,21 +20,6 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     email: '',
     // Add more fields as needed
   });
-  const [accessToken, setAccessToken] = useState('');
-
-  useEffect(() => {
-    const handleAuthSuccess = () => {
-      const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-
-      if (params.has('access_token')) {
-        const token = params.get('access_token');
-        setAccessToken(token || '');
-      }
-    };
-
-    handleAuthSuccess();
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,79 +31,38 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     }
   };
 
-  const handleAuthClick = async () => {
-    try {
-      const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
-      const redirectUri = 'http://localhost:3000/oauth2callback'; // Replace with your redirect URI
-      const clientId =
-        '370773725330-hk1dfkfcn6uhjo2cebqk8d4iiviudfmu.apps.googleusercontent.com'; // Replace with your OAuth2 client ID
-      const scope = 'https://www.googleapis.com/auth/drive.file';
+  const uploadResumeToAzureBlobStorage = async () => {
+    const accountName = process.env.REACT_APP_AZURE_ACCOUNT_NAME;
+    const containerName = process.env.REACT_APP_AZURE_CONTAINER_NAME;
+    const sasToken = process.env.REACT_APP_AZURE_SAS_TOKEN;
 
-      window.location.href = `${authUrl}?response_type=token&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
-    } catch (error) {
-      console.error('Authentication error:', error);
-    }
-  };
-
-  const uploadResumeToDrive = async () => {
-    if (!accessToken) {
-      console.log('Authentication required');
-      return;
+    if (!accountName || !containerName || !sasToken) {
+      throw new Error('Azure Blob Storage credentials missing.');
     }
 
-    // Create a new file in Google Drive
     const fileMetadata = {
       name: resumeFile?.name || 'resume.pdf',
-      parents: ['1UWW22Fj10ohYtfW9-JBS5ZpnEG3Yg-Ov'], // Replace with the ID of the folder in Google Drive
     };
 
     const createResponse = await axios.post(
-      'https://www.googleapis.com/drive/v3/files',
-      fileMetadata,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    const fileId = createResponse.data.id;
-
-    // Upload the resume content
-    await axios.patch(
-      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      `https://${accountName}.blob.core.windows.net/${containerName}/${fileMetadata.name}${sasToken}`,
       resumeFile,
       {
         headers: {
           'Content-Type': resumeFile?.type,
-          Authorization: `Bearer ${accessToken}`,
         },
       }
     );
 
-    const response = await axios.get(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=webViewLink`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const fileUrl = createResponse.request.res.responseUrl;
 
-    return response.data;
+    return fileUrl;
   };
 
-  const submitFormResponse = async (uploadResponse: any) => {
-    if (!accessToken) {
-      console.log('Authentication required');
-      return;
-    }
-
-    // Create a new response in Google Forms
+  const submitFormResponse = async (fileUrl: string) => {
     const formDataWithResumeUrl = {
       ...formData,
-      resumeUrl: uploadResponse.webViewLink,
+      resumeUrl: fileUrl,
     };
 
     const payload = new FormData();
@@ -127,15 +71,19 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     payload.append('entry.1423805949', formDataWithResumeUrl.resumeUrl);
 
     try {
-      const FORM_ID =
-        '1FAIpQLSe1n_fKUjx17L2rOg2WkpoeS7lZoZdaZEDTajbKFMJ2sh5cPg'; // Replace with the URL of your Google Form's endpoint
+      const FORM_ID = process.env.REACT_APP_GOOGLE_FORM_ID;
+
+      if (!FORM_ID) {
+        throw new Error('Google Form ID missing.');
+      }
+
       const response = await axios.post(
         `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`,
         payload
       );
       return response.data;
     } catch (error) {
-      console.log('Form not sumbit', error);
+      console.log('Form not submitted', error);
       return false;
     }
   };
@@ -143,24 +91,23 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const uploadResponse = await uploadResumeToDrive();
-    console.log('uploadResponse', uploadResponse.webViewLink);
+    try {
+      const fileUrl = await uploadResumeToAzureBlobStorage();
+      console.log('fileUrl', fileUrl);
 
-    const formResponse = await submitFormResponse(uploadResponse);
+      const formResponse = await submitFormResponse(fileUrl);
 
-    if (formResponse) {
-      onSubmit(formData);
+      if (formResponse) {
+        onSubmit(formData);
+      }
+    } catch (error) {
+      // Handle errors here (display error message, log, etc.)
+      console.log('Error:', error);
     }
   };
 
   return (
     <div>
-      {accessToken ? (
-        <p>Authenticated</p>
-      ) : (
-        <button onClick={handleAuthClick}>Authenticate with Google</button>
-      )}
-
       <form onSubmit={handleSubmit}>
         <label>
           Name:
@@ -189,9 +136,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
             onChange={handleFileChange}
           />
         </label>
-        <button type='submit' disabled={!accessToken}>
-          Submit
-        </button>
+        <button type='submit'>Submit</button>
       </form>
     </div>
   );
