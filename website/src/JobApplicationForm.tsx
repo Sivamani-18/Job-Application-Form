@@ -39,7 +39,8 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       name: resumeFile?.name || 'resume.pdf',
     };
 
-    const url = `https://${accountName}.blob.core.windows.net/${containerName}/${fileMetadata.name}?${sasToken}`;
+    const folderName = 'formdata'; // Specify folder name
+    const url = `https://${accountName}.blob.core.windows.net/${containerName}/${folderName}/${fileMetadata.name}?${sasToken}`;
 
     await axios.put(url, resumeFile, {
       headers: {
